@@ -6,7 +6,12 @@ Code written by ZMTurpin in June2023. Trims, aligns, filters, and calculates DEG
 
   Rsem_align.sh
     Create STAR indices and align to transcript models in RSEM. Estimate transcript- and gene- level mRNA abundances (TPM)
-  
+
+  rpm_RNA_GenomeCov.sh
+    #This script prepares rpm-normalized per-base coverage files (bw) for each replicate of an RNA-seq experiment AND merges the replicates.
+    #inputs are STAR-aligned read pairs
+    #ZMT_JULY27_2023
+
   filter.log
     fix header in RSEM output tables and filter rows with (log2FoldChange)^2 >= 4 AND padj =< 0.05
 
