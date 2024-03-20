@@ -1,0 +1,71 @@
+#log, not a script
+#from maizeMine DEG ortholog pairs, build up table of shared gene identifiers, lfc values, and padj values
+
+#full outer join B73 DEG list to Ky21 and Oh7b DEG+B73ortho DEG lists
+
+
+conda activate IDR-2.0.3
+
+python3
+
+#import packages
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import glob
+
+#read in tables
+
+B73degs=pd.read_csv("/psi/bassdata/zturpin/Flooding_RNAseq/DEGtables/B73_RNAseq_FloodvsControl_sigDif_list.txt", header=None, names=["B73degs"], sep='\t', index_col=None)
+
+B73values=pd.read_csv("/psi/bassdata/zturpin/Flooding_RNAseq/DEGtables/B73_RNAseq_FloodvsControl_sigDif.tsv", header=0, sep='\t', index_col=None)
+
+Ky21values=pd.read_csv("/psi/bassdata/zturpin/Flooding_RNAseq/DEGtables/Ky21_RNAseq_FloodvsControl_sigDif.tsv", header=0, sep='\t', index_col=None)
+
+Oh7bvalues=pd.read_csv("/psi/bassdata/zturpin/Flooding_RNAseq/DEGtables/Oh7b_RNAseq_FloodvsControl_sigDif.tsv", header=0, sep='\t', index_col=None)
+
+Ky21degs=pd.read_csv("Ky21_DEGS_to_B73_syntelogs.tsv", header=None, sep='\t', index_col=None, names=["Ky21degs", "kBorthos"])
+Oh7bdegs=pd.read_csv("Oh7b_DEGS_to_B73_syntelogs.tsv", header=None, sep='\t', index_col=None, names=["Oh7bdegs", "oBorthos"])
+
+#join deg lists using b73 identifiers. create list of genes deg in at least one genotype
+
+b=B73degs['B73degs']
+k=Ky21degs['kBorthos']
+o=Oh7bdegs['oBorthos']
+
+bk=pd.Series(pd.concat([b, k]))
+bko=pd.DataFrame(pd.concat([bk, o])).drop_duplicates()
+bko.rename(columns={0:'B73SyntelogId'}, inplace=True)
+
+#add RNAseq data (log2fc[flood/ctl], padj) only
+
+#add b73 orthologs to Ky21values
+kyready = Ky21degs.merge(Ky21values, how='left', left_on='Ky21degs', right_on='GeneID')[['kBorthos', 'log2FoldChange']]
+#add b73 orthologs to Oh7bvalues
+ohready = ohready = Oh7bdegs.merge(Oh7bvalues, how='left', left_on='Oh7bdegs', right_on='GeneID')[['oBorthos', 'log2FoldChange']]
+
+#join unique list to orthoDataTables
+#Note: some B73:Ky21 and B73:Oh7b are NOT 1:1 associations
+
+join1=bko.merge(B73values, how='left', left_on='B73SyntelogId', right_on='GeneID')[['B73SyntelogId', 'log2FoldChange']]
+
+join2=join1.merge(kyready, how='left', left_on='B73SyntelogId', right_on='kBorthos', suffixes=("_B73", "_Ky21"))
+
+join3 = join2.merge(ohready, how='left', left_on='B73SyntelogId', right_on='oBorthos')[['B73SyntelogId', 'log2FoldChange_B73', 'log2FoldChange_Ky21', 'log2FoldChange']].fillna(value=0)
+
+join3.rename(columns={'log2FoldChange': 'log2FoldChange_Oh7b'}, inplace=True)
+
+
+
+#save DEG xref table 
+#
+join3.to_csv("maize_ortholog_degTable.tsv", sep='\t', index=False)
+
+#filter to input table for cluster analysis
+#
+#clusterData=join3[['unique', 'log2FoldChange_B73', 'log2FoldChange_Ky21', 'log2FoldChange']]
+#clusterData.rename(columns={'log2FoldChange':'log2FoldChange_Oh7b'}, inplace=True)
+
+#clusterData.to_csv("RNAseqClusterInput.tsv", sep='\t', index=False)
+
